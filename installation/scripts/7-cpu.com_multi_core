@@ -1,0 +1,9 @@
+Intel N2840         | 4    Threads   | 3080        | 4080
+Intel i5-650        | 4    Threads   | 8200        | 9460
+Intel Xeon x5650    | 12   Threads   | 16200       | 22700
+Intel i7 4770       | 8    Threads   | 20500       | 21000
+Intel i7-6700       | 8    Threads   | 24700       | 22900
+Apple M1            | 8    Threads   | 50365       | 45009
+Ryzen 5600G         | 12   Threads   | 55507       | 83299
+Intel E5-2699 v4    | 44   Threads   | 107000      | 87000
+Intel E5-2699 v4*2  | 88   Threads   | 186000      | 174000

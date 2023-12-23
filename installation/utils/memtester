@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+CURRENT_DIR=$(dirname $(readlink -f "$0"))
+uname -m | grep x86_64 > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    ${CURRENT_DIR}/memtester_x86/memtester $@
+else
+    ${CURRENT_DIR}/memtester_arm/memtester $@
+fi
