@@ -1,35 +1,6 @@
 #!/usr/bin/env bash
-# Colors
-BLACK="\033[30m"
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-PURPLE="\033[35m"
-SKYBLUE="\033[36m"
-WHITE="\033[37m"
-PLAIN="\033[0m"
-BOLD_TEXT=$(tput bold)
-RESET_BOLD=$(tput sgr0)
-
-# 是否支持ansi转义
-ANSI=
-if [ -t 1 ] && [ "$(tput colors)" -ge 8 ]; then
-    ANSI=y
-else
-    echo "${BOLD_TEXT}当前终端不支持ANSI转义，部分显示可能有问题。${RESET_BOLD}"
-fi
-
-CURRENT_DIR=$(dirname $(readlink -f "$0"))
-
-next() {
-    printf "%-70s\n" "-" | sed 's/\s/-/g'
-}
-
-new_echo() {
-    text=$(printf "%-15s :  %s\n" "$1" "$2")
-    echo -e "${YELLOW}${text}${PLAIN}"
-}
+CURRENT_DIR=$(dirname "$(readlink -f "$0")")
+. "${CURRENT_DIR}/common.sh"
 
 get_opsy() {
     [ -f /etc/redhat-release ] && awk '{print ($1,$3~/^[0-9]/?$3:$4)}' /etc/redhat-release && return
@@ -42,7 +13,10 @@ system_name=$(get_opsy)
 kernel=$(uname -r)
 current_time=$(date "+%Y-%m-%d %H:%M")
 bootime=$(who -b | awk '{print $(NF-1),$NF}')
-manufacturer=$(dmidecode|grep "System Information" -A9|egrep  "Manufacturer|Product Name" | awk 'BEGIN{FS=":";ORS="";}{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
+if command -v dmidecode >/dev/null 2>&1; then
+    manufacturer=$(dmidecode 2>/dev/null | grep "System Information" -A9 | egrep "Manufacturer|Product Name" | awk 'BEGIN{FS=":";ORS="";}{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
+fi
+[ -z "${manufacturer:-}" ] && manufacturer="unknown"
 cpu_model=$(awk -F: '/model name/ {name=$2} END {print name}' /proc/cpuinfo | sed 's/^[ \t]*//;s/[ \t]*$//')
 cpu_num=$(cat /proc/cpuinfo |grep "physical id"|sort|uniq|wc -l)
 cpu_cores=$( awk -F: '/model name/ {core++} END {print core}' /proc/cpuinfo )
@@ -54,7 +28,7 @@ mem_info=$(free -h | awk '/Mem/ {printf("Used: %s Total: %s\n",$3,$2)}')
 disk_info=$(lsblk -d --output NAME,SIZE | awk '!/NAME/{printf("%s %s/",$1,$2)} END{printf("\n")}')
 
 
-clear
+clear_screen
 next
 echo -e "${SKYBLUE}系统信息${PLAIN}"
 next
