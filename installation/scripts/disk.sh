@@ -1,36 +1,7 @@
 #!/bin/bash
 
-# Colors
-BLACK="\033[30m"
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-PURPLE="\033[35m"
-SKYBLUE="\033[36m"
-WHITE="\033[37m"
-PLAIN="\033[0m"
-BOLD_TEXT=$(tput bold)
-RESET_BOLD=$(tput sgr0)
-
-# 是否支持ansi转义
-ANSI=
-if [ -t 1 ] && [ "$(tput colors)" -ge 8 ]; then
-    ANSI=y
-else
-    echo "${BOLD_TEXT}当前终端不支持ANSI转义，部分显示可能有问题。${RESET_BOLD}"
-fi
-
-CURRENT_DIR=$(dirname $(readlink -f "$0"))
-
-next() {
-    printf "%-70s\n" "-" | sed 's/\s/-/g'
-}
-
-new_echo() {
-    text=$(printf "%-15s :  %s\n" "$1" "$2")
-    echo -e "${YELLOW}${text}${PLAIN}"
-}
+CURRENT_DIR=$(dirname "$(readlink -f "$0")")
+. "${CURRENT_DIR}/common.sh"
 
 usage() {
     echo -e "${SKYBLUE}Usage: $0 [-d|-s]${PLAIN}"
@@ -38,13 +9,6 @@ usage() {
     echo "  -d: 测试路径。默认是当前目录。"
     echo -e "  -s: 测试文件大小。默认是256MB。${PLAIN}"
     exit 1
-}
-
-# 显示一个进度状态。前后两行各支持一个字符串描述。
-progress_bar() {
-    [ -n "$2" ] && echo -e "${SKYBLUE}$2${PLAIN}"
-    s='-\|/'; i=0; while kill -0 $1 >/dev/null 2>&1; do i=$(( (i+1) %4 )); printf "\r${s:$i:1}"; sleep .1; done
-    [ -n "$3" ] && echo -e "\n${SKYBLUE}$3${PLAIN}"
 }
 
 fio2cdm() {
@@ -77,7 +41,14 @@ fio2cdm() {
 
 target=.
 size=256m
-trap "rm -f ${target}/.fio-diskmark" 0 1 2 3 9 15
+tempfile=
+
+cleanup() {
+    rm -f "${target}/.fio-diskmark"
+    [ -n "${tempfile}" ] && rm -f "${tempfile}"
+}
+
+trap cleanup EXIT INT TERM
 
 # 解析命令行参数
 while getopts ":d:s:" opt; do
@@ -105,8 +76,18 @@ while getopts ":d:s:" opt; do
     esac
 done
 
+if [ ! -d "${target}" ]; then
+    echo -e "${RED}无效的测试路径:${target}${PLAIN}"
+    exit 1
+fi
+
+if [ ! -w "${target}" ]; then
+    echo -e "${RED}测试路径不可写:${target}${PLAIN}"
+    exit 1
+fi
+
 tempfile=$(mktemp)
-cat <<EOF | ${CURRENT_DIR}/../utils/fio - | fio2cdm > $tempfile &
+cat <<EOF | "${CURRENT_DIR}/../utils/fio" - | fio2cdm > "${tempfile}" &
 [global]
 ioengine=libaio
 iodepth=1
@@ -159,7 +140,7 @@ rw=randwrite
 stonewall
 EOF
 
-path=$(readlink -f $target)
+path=$(readlink -f "${target}")
 next
 echo -e "${SKYBLUE}磁盘基本信息：${PLAIN}"
 next
@@ -167,8 +148,8 @@ echo -e "${YELLOW}"
 lsblk
 echo -e "${PLAIN}"
 next
-progress_bar $! "开始在${path}进行磁盘性能测试；测试文件大小为${size}" "测试结果参考："
+progress_bar "$!" "开始在${path}进行磁盘性能测试；测试文件大小为${size}" "测试结果参考："
 echo -e "${YELLOW}"
-cat $tempfile
+cat "${tempfile}"
 echo -e "${PLAIN}"
 next
