@@ -1,36 +1,7 @@
 #!/bin/bash
 
-# Colors
-BLACK="\033[30m"
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-PURPLE="\033[35m"
-SKYBLUE="\033[36m"
-WHITE="\033[37m"
-PLAIN="\033[0m"
-BOLD_TEXT=$(tput bold)
-RESET_BOLD=$(tput sgr0)
-
-# 是否支持ansi转义
-ANSI=
-if [ -t 1 ] && [ "$(tput colors)" -ge 8 ]; then
-    ANSI=y
-else
-    echo "${BOLD_TEXT}当前终端不支持ANSI转义，部分显示可能有问题。${RESET_BOLD}"
-fi
-
-CURRENT_DIR=$(dirname $(readlink -f "$0"))
-
-next() {
-    printf "%-70s\n" "-" | sed 's/\s/-/g'
-}
-
-new_echo() {
-    text=$(printf "%-15s :  %s\n" "$1" "$2")
-    echo -e "${YELLOW}${text}${PLAIN}"
-}
+CURRENT_DIR=$(dirname "$(readlink -f "$0")")
+. "${CURRENT_DIR}/common.sh"
 
 usage() {
     echo -e "${SKYBLUE}Usage: $0 [-s]${PLAIN}"
@@ -46,8 +17,8 @@ while getopts ":s:" opt; do
         s)
             size=$OPTARG
             if [[ $size =~ ^[0-9]+$ ]]; then
-                mem_free=$(awk '/MemFree/{print int($2/1024)}' /proc/meminfo | head -n1)
-                if [ "$size" -gt "$mem_free" ]; then
+                mem_available=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo | head -n1)
+                if [ -z "${mem_available}" ] || [ "${size}" -gt "${mem_available}" ]; then
                     echo -e "${RED}无效的size值:${OPTARG}，size值超过实际剩余内存大小。${PLAIN}"
                     usage
                     exit 1
@@ -64,6 +35,13 @@ while getopts ":s:" opt; do
         :)
     esac
 done
+
+shift $((OPTIND - 1))
+if [ "$#" -ne 0 ]; then
+    usage
+    exit 1
+fi
+
 next
 echo -e "${SKYBLUE}内存基本信息：${PLAIN}"
 next
@@ -74,20 +52,24 @@ next
 echo -e "${SKYBLUE}内存设备信息：${PLAIN}"
 next
 echo -e "${YELLOW}"
-dmidecode --type 17 | awk '
-    /Size:/ {size=$2$3} 
-    /Type:/ {type=$2} 
-    /Speed:/ {speed=$2$3} 
-    /Manufacturer/ && !/NO DIMM/ {
-        manufacturer=$2; 
-        i++; 
-        print "Memory Device", i ":", manufacturer, size, type, speed
-    }
-'
+if command -v dmidecode >/dev/null 2>&1; then
+    dmidecode --type 17 2>/dev/null | awk '
+        /Size:/ {size=$2$3}
+        /Type:/ {type=$2}
+        /Speed:/ {speed=$2$3}
+        /Manufacturer/ && !/NO DIMM/ {
+            manufacturer=$2;
+            i++;
+            print "Memory Device", i ":", manufacturer, size, type, speed
+        }
+    '
+else
+    echo "dmidecode is not installed"
+fi
 echo -e "${PLAIN}"
 next
 echo -e "${SKYBLUE}开始进行内存性能测试；测试内存大小为${size}MB${PLAIN}"
 echo -e "${YELLOW}"
-${CURRENT_DIR}/../utils/memtester $size 1
+"${CURRENT_DIR}/../utils/memtester" "${size}" 1
 echo -e "${PLAIN}"
 next
