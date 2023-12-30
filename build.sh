@@ -21,8 +21,12 @@ rm -f "${WORK_DIR}"/*.bin
 rm -f "${WORK_DIR}"/*.md5
 makeself="${WORK_DIR}/makeself/makeself.sh"
 
-if [ ! -x "${makeself}" ]; then
-    echo "makeself not found: ${makeself}"
+if [ -x "${makeself}" ]; then
+    :
+elif command -v makeself >/dev/null 2>&1; then
+    makeself="$(command -v makeself)"
+else
+    echo "makeself not found: ${WORK_DIR}/makeself/makeself.sh or PATH"
     exit 1
 fi
 
