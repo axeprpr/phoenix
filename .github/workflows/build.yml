@@ -1,0 +1,39 @@
+name: Build Phoenix Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install makeself
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y makeself
+
+      - name: Build package
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          GIT_COMMIT: ${{ github.sha }}
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: phoenix-package-${{ github.run_number }}
+          path: |
+            phoenix.*.bin
+            phoenix.*.bin.md5
+          if-no-files-found: error
