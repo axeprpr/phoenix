@@ -25,12 +25,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y makeself
 
+      - name: Prepare executable permissions
+        run: |
+          chmod +x build.sh
+          chmod +x installation/setup.sh installation/phoenix.sh
+          chmod +x installation/scripts/*.sh
+          chmod +x installation/utils/7za installation/utils/fio installation/utils/memtester
+          chmod +x installation/utils/7z_x86/7zzs installation/utils/7z_arm/7zzs
+          chmod +x installation/utils/fio_x86/fio installation/utils/fio_arm/fio
+          chmod +x installation/utils/memtester_x86/memtester installation/utils/memtester_arm/memtester
+
       - name: Build package
         env:
           BUILD_NUMBER: ${{ github.run_number }}
           GIT_COMMIT: ${{ github.sha }}
         run: |
-          chmod +x build.sh
           ./build.sh
 
       - name: Upload package artifacts
